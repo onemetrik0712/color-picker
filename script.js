@@ -33,7 +33,8 @@ canvasContext = imageCanvas.getContext('2d', { willReadFrequently: true });
 // ============================================
 
 // Browse button click handler
-uploadButton.addEventListener('click', () => {
+uploadButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent event bubbling to upload area
     fileInput.click();
 });
 
