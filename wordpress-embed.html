@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Picker - Extract Colors from Images</title>
+
+    <style>
+/* ============================================
+   CSS Variables & Reset
+   ============================================ */
+:root {
+    /* Color Palette - Light Theme */
+    --color-background: #f8fafc;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f1f5f9;
+    --color-card: #ffffff;
+    --color-card-border: #e2e8f0;
+    --color-primary: #6366f1;
+    --color-primary-hover: #4f46e5;
+    --color-accent: #8b5cf6;
+    --color-success: #10b981;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #475569;
+    --color-text-muted: #94a3b8;
+
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+
+    /* Border Radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+
+    /* Typography */
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 2rem;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --transition-slow: 350ms ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   Container & Layout
+   ============================================ */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing-xl);
+}
+
+.header {
+    text-align: center;
+    margin-bottom: var(--spacing-2xl);
+    padding-top: var(--spacing-lg);
+}
+
+.title {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-secondary);
+    font-weight: 400;
+}
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+}
+
+@media (min-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 380px 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .upload-card {
+        grid-column: 1;
+        grid-row: 1 / 3;
+    }
+
+    .viewer-card {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .results-card {
+        grid-column: 2;
+        grid-row: 2;
+    }
+}
+
+/* ============================================
+   Card Component
+   ============================================ */
+.card {
+    background: var(--color-card);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-lg);
+    transition: border-color var(--transition-base);
+}
+
+.card:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.card-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-text-primary);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.card-header .card-title {
+    margin-bottom: 0;
+}
+
+/* ============================================
+   Upload Card
+   ============================================ */
+.upload-area {
+    border: 2px dashed var(--color-card-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-2xl);
+    text-align: center;
+    transition: all var(--transition-base);
+    cursor: pointer;
+    background: var(--color-surface);
+}
+
+.upload-area:hover {
+    border-color: var(--color-primary);
+    background: var(--color-surface-hover);
+}
+
+.upload-area.drag-over {
+    border-color: var(--color-primary);
+    background: rgba(99, 102, 241, 0.1);
+    transform: scale(1.02);
+}
+
+.upload-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto var(--spacing-md);
+    color: var(--color-primary);
+}
+
+.upload-text {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+}
+
+.upload-subtext {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--spacing-md);
+}
+
+.upload-button {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-xl);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-family);
+    box-shadow: var(--shadow-md);
+}
+
+.upload-button:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.upload-button:active {
+    transform: translateY(0);
+}
+
+.upload-hint {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    margin-top: var(--spacing-md);
+}
+
+/* ============================================
+   Viewer Card
+   ============================================ */
+.viewer-card {
+    min-height: 400px;
+}
+
+.viewer-container {
+    position: relative;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    min-height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viewer-placeholder {
+    text-align: center;
+    color: var(--color-text-muted);
+}
+
+.placeholder-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto var(--spacing-md);
+    opacity: 0.4;
+}
+
+.viewer-placeholder p {
+    font-size: var(--font-size-lg);
+}
+
+#imageCanvas {
+    display: none;
+    max-width: 100%;
+    max-height: 600px;
+    cursor: crosshair;
+    image-rendering: crisp-edges;
+}
+
+#imageCanvas.active {
+    display: block;
+}
+
+.viewer-hint {
+    margin-top: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-align: center;
+    display: none;
+}
+
+.viewer-hint.active {
+    display: block;
+}
+
+.clear-button {
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-family);
+}
+
+.clear-button:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* ============================================
+   Results Card
+   ============================================ */
+.results-content {
+    display: none;
+}
+
+.results-content.active {
+    display: flex;
+    gap: var(--spacing-xl);
+    align-items: center;
+}
+
+.results-placeholder {
+    text-align: center;
+    padding: var(--spacing-2xl);
+    color: var(--color-text-muted);
+}
+
+.results-placeholder.hidden {
+    display: none;
+}
+
+.color-preview {
+    flex-shrink: 0;
+}
+
+.color-swatch {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--color-card-border);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-base);
+}
+
+.color-swatch:hover {
+    transform: scale(1.05);
+}
+
+.color-info {
+    flex: 1;
+}
+
+.color-label {
+    display: block;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.hex-display-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.hex-input {
+    flex: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    font-size: var(--font-size-xl);
+    color: var(--color-text-primary);
+    font-family: 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.hex-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.copy-button {
+    background: var(--color-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-md);
+}
+
+.copy-button:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.copy-button:active {
+    transform: translateY(0);
+}
+
+.copy-icon {
+    width: 20px;
+    height: 20px;
+    color: white;
+}
+
+.rgb-display {
+    background: var(--color-surface);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-card-border);
+}
+
+.rgb-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    margin-right: var(--spacing-xs);
+}
+
+.rgb-value {
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+/* ============================================
+   Toast Notification
+   ============================================ */
+.toast {
+    position: fixed;
+    bottom: var(--spacing-xl);
+    right: var(--spacing-xl);
+    background: var(--color-success);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-weight: 500;
+    transform: translateY(200%);
+    transition: transform var(--transition-base);
+    z-index: 1000;
+}
+
+.toast.show {
+    transform: translateY(0);
+}
+
+.toast-icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+@media (max-width: 768px) {
+    .container {
+        padding: var(--spacing-md);
+    }
+
+    .header {
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .subtitle {
+        font-size: var(--font-size-base);
+    }
+
+    .results-content.active {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .color-swatch {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 3px solid var(--color-primary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">Color Picker</h1>
+            <p class="subtitle">Upload an image and click anywhere to extract the hex color</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="main-grid">
+            <!-- Upload Card -->
+            <section class="card upload-card">
+                <h2 class="card-title">Upload Image</h2>
+                <div class="upload-area" id="uploadArea">
+                    <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p class="upload-text">Drag & drop an image here</p>
+                    <p class="upload-subtext">or</p>
+                    <button class="upload-button" id="uploadButton">Browse Files</button>
+                    <p class="upload-hint">Supports JPEG and PNG (max 10MB)</p>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png" hidden>
+                </div>
+            </section>
+
+            <!-- Image Viewer Card -->
+            <section class="card viewer-card" id="viewerCard">
+                <div class="card-header">
+                    <h2 class="card-title">Image Viewer</h2>
+                    <button class="clear-button" id="clearButton">Clear</button>
+                </div>
+                <div class="viewer-container" id="viewerContainer">
+                    <div class="viewer-placeholder">
+                        <svg class="placeholder-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <p>No image loaded</p>
+                    </div>
+                    <canvas id="imageCanvas"></canvas>
+                </div>
+                <p class="viewer-hint" id="viewerHint">Click anywhere on the image to pick a color</p>
+            </section>
+
+            <!-- Results Card -->
+            <section class="card results-card" id="resultsCard">
+                <h2 class="card-title">Color Result</h2>
+                <div class="results-content">
+                    <div class="color-preview" id="colorPreview">
+                        <div class="color-swatch" id="colorSwatch"></div>
+                    </div>
+                    <div class="color-info">
+                        <label class="color-label">Hex Code</label>
+                        <div class="hex-display-group">
+                            <input type="text" class="hex-input" id="hexInput" readonly value="#000000">
+                            <button class="copy-button" id="copyButton" title="Copy to clipboard">
+                                <svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="rgb-display" id="rgbDisplay">
+                            <span class="rgb-label">RGB:</span>
+                            <span class="rgb-value" id="rgbValue">0, 0, 0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="results-placeholder" id="resultsPlaceholder">
+                    <p>Click on the image to extract a color</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span class="toast-message">Copied to clipboard!</span>
+        </div>
+    </div>
+
+    <script>
+// ============================================
+// DOM Elements
+// ============================================
+const uploadArea = document.getElementById('uploadArea');
+const uploadButton = document.getElementById('uploadButton');
+const fileInput = document.getElementById('fileInput');
+const imageCanvas = document.getElementById('imageCanvas');
+const viewerContainer = document.getElementById('viewerContainer');
+const viewerHint = document.getElementById('viewerHint');
+const clearButton = document.getElementById('clearButton');
+const resultsCard = document.getElementById('resultsCard');
+const resultsContent = document.querySelector('.results-content');
+const resultsPlaceholder = document.getElementById('resultsPlaceholder');
+const colorSwatch = document.getElementById('colorSwatch');
+const hexInput = document.getElementById('hexInput');
+const rgbValue = document.getElementById('rgbValue');
+const copyButton = document.getElementById('copyButton');
+const toast = document.getElementById('toast');
+
+// ============================================
+// Global State
+// ============================================
+let currentImage = null;
+let canvasContext = null;
+
+// ============================================
+// Initialize Canvas Context
+// ============================================
+canvasContext = imageCanvas.getContext('2d', { willReadFrequently: true });
+
+// ============================================
+// Upload Functionality
+// ============================================
+
+// Browse button click handler
+uploadButton.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent event bubbling to upload area
+    fileInput.click();
+});
+
+// Upload area click handler
+uploadArea.addEventListener('click', (e) => {
+    if (e.target === uploadArea || e.target.closest('.upload-area')) {
+        fileInput.click();
+    }
+});
+
+// File input change handler
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        handleFile(file);
+    }
+});
+
+// Drag and drop handlers
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadArea.classList.add('drag-over');
+});
+
+uploadArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadArea.classList.remove('drag-over');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadArea.classList.remove('drag-over');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        if (file.type.match(/^image\/(jpeg|png)$/)) {
+            handleFile(file);
+        } else {
+            showToast('Please upload a JPEG or PNG image', 'error');
+        }
+    }
+});
+
+// ============================================
+// File Processing
+// ============================================
+
+/**
+ * Handles the uploaded image file
+ * @param {File} file - The image file to process
+ */
+function handleFile(file) {
+    // Validate file type
+    if (!file.type.match(/^image\/(jpeg|png)$/)) {
+        showToast('Please upload a JPEG or PNG image', 'error');
+        return;
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+        showToast('Image size must be less than 10MB', 'error');
+        return;
+    }
+
+    // Read the file
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+        loadImage(e.target.result);
+    };
+
+    reader.onerror = () => {
+        showToast('Error reading file', 'error');
+    };
+
+    reader.readAsDataURL(file);
+}
+
+/**
+ * Loads and displays the image on the canvas
+ * @param {string} dataUrl - The image data URL
+ */
+function loadImage(dataUrl) {
+    const img = new Image();
+
+    img.onload = () => {
+        currentImage = img;
+        renderImageToCanvas(img);
+        showImageViewer();
+        hideResults();
+    };
+
+    img.onerror = () => {
+        showToast('Error loading image', 'error');
+    };
+
+    img.src = dataUrl;
+}
+
+/**
+ * Renders the image to the canvas with proper scaling
+ * @param {Image} img - The image element to render
+ */
+function renderImageToCanvas(img) {
+    // Get container dimensions
+    const containerWidth = viewerContainer.clientWidth;
+    const containerHeight = 400; // Max height for viewer
+
+    // Calculate scaling to fit within container while maintaining aspect ratio
+    const imgAspectRatio = img.width / img.height;
+    const containerAspectRatio = containerWidth / containerHeight;
+
+    let canvasWidth, canvasHeight;
+
+    if (imgAspectRatio > containerAspectRatio) {
+        // Image is wider than container
+        canvasWidth = Math.min(img.width, containerWidth);
+        canvasHeight = canvasWidth / imgAspectRatio;
+    } else {
+        // Image is taller than container
+        canvasHeight = Math.min(img.height, containerHeight);
+        canvasWidth = canvasHeight * imgAspectRatio;
+    }
+
+    // Set canvas dimensions
+    imageCanvas.width = canvasWidth;
+    imageCanvas.height = canvasHeight;
+
+    // Draw image on canvas
+    canvasContext.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+
+    // Show canvas
+    imageCanvas.classList.add('active');
+}
+
+/**
+ * Shows the image viewer and hides the placeholder
+ */
+function showImageViewer() {
+    const placeholder = viewerContainer.querySelector('.viewer-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
+    viewerHint.classList.add('active');
+}
+
+/**
+ * Hides the image viewer and shows the placeholder
+ */
+function hideImageViewer() {
+    const placeholder = viewerContainer.querySelector('.viewer-placeholder');
+    if (placeholder) {
+        placeholder.style.display = 'block';
+    }
+    imageCanvas.classList.remove('active');
+    viewerHint.classList.remove('active');
+}
+
+// ============================================
+// Color Picking Functionality
+// ============================================
+
+/**
+ * Canvas click handler to extract color
+ */
+imageCanvas.addEventListener('click', (e) => {
+    if (!currentImage) return;
+
+    // Get click coordinates relative to canvas
+    const rect = imageCanvas.getBoundingClientRect();
+    const scaleX = imageCanvas.width / rect.width;
+    const scaleY = imageCanvas.height / rect.height;
+
+    const x = Math.floor((e.clientX - rect.left) * scaleX);
+    const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+    // Extract pixel data
+    const pixelData = canvasContext.getImageData(x, y, 1, 1).data;
+
+    // Get RGB values
+    const r = pixelData[0];
+    const g = pixelData[1];
+    const b = pixelData[2];
+    const a = pixelData[3];
+
+    // Handle transparent pixels
+    if (a === 0) {
+        showToast('This pixel is transparent', 'info');
+        return;
+    }
+
+    // Convert to hex
+    const hexColor = rgbToHex(r, g, b);
+
+    // Display results
+    displayColorResult(hexColor, r, g, b);
+});
+
+/**
+ * Converts RGB values to hex color code
+ * @param {number} r - Red value (0-255)
+ * @param {number} g - Green value (0-255)
+ * @param {number} b - Blue value (0-255)
+ * @returns {string} Hex color code
+ */
+function rgbToHex(r, g, b) {
+    const toHex = (value) => {
+        const hex = value.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
+/**
+ * Displays the color result in the results card
+ * @param {string} hex - Hex color code
+ * @param {number} r - Red value
+ * @param {number} g - Green value
+ * @param {number} b - Blue value
+ */
+function displayColorResult(hex, r, g, b) {
+    // Update color swatch
+    colorSwatch.style.backgroundColor = hex;
+
+    // Update hex input
+    hexInput.value = hex;
+
+    // Update RGB display
+    rgbValue.textContent = `${r}, ${g}, ${b}`;
+
+    // Show results
+    showResults();
+}
+
+/**
+ * Shows the results section
+ */
+function showResults() {
+    resultsPlaceholder.classList.add('hidden');
+    resultsContent.classList.add('active');
+}
+
+/**
+ * Hides the results section
+ */
+function hideResults() {
+    resultsPlaceholder.classList.remove('hidden');
+    resultsContent.classList.remove('active');
+}
+
+// ============================================
+// Copy to Clipboard Functionality
+// ============================================
+
+/**
+ * Copy button click handler
+ */
+copyButton.addEventListener('click', async () => {
+    const hexValue = hexInput.value;
+
+    try {
+        await navigator.clipboard.writeText(hexValue);
+        showToast('Copied to clipboard!', 'success');
+    } catch (err) {
+        // Fallback for older browsers
+        fallbackCopyToClipboard(hexValue);
+    }
+});
+
+/**
+ * Fallback copy method for older browsers
+ * @param {string} text - Text to copy
+ */
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    try {
+        document.execCommand('copy');
+        showToast('Copied to clipboard!', 'success');
+    } catch (err) {
+        showToast('Failed to copy', 'error');
+    }
+
+    document.body.removeChild(textArea);
+}
+
+// Also allow clicking on hex input to copy
+hexInput.addEventListener('click', () => {
+    hexInput.select();
+});
+
+// ============================================
+// Clear Functionality
+// ============================================
+
+/**
+ * Clear button click handler
+ */
+clearButton.addEventListener('click', () => {
+    currentImage = null;
+    fileInput.value = '';
+    canvasContext.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+    hideImageViewer();
+    hideResults();
+});
+
+// ============================================
+// Toast Notifications
+// ============================================
+
+/**
+ * Shows a toast notification
+ * @param {string} message - The message to display
+ * @param {string} type - The type of toast (success, error, info)
+ */
+function showToast(message, type = 'success') {
+    const toastMessage = toast.querySelector('.toast-message');
+    const toastIcon = toast.querySelector('.toast-icon');
+
+    // Update message
+    toastMessage.textContent = message;
+
+    // Update icon based on type
+    if (type === 'error') {
+        toast.style.background = '#ef4444';
+        toastIcon.innerHTML = '<path d="M6 18L18 6M6 6l12 12"></path>';
+    } else if (type === 'info') {
+        toast.style.background = '#3b82f6';
+        toastIcon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>';
+    } else {
+        toast.style.background = '#10b981';
+        toastIcon.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
+    }
+
+    // Show toast
+    toast.classList.add('show');
+
+    // Hide after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// ============================================
+// Responsive Canvas Resize
+// ============================================
+
+/**
+ * Handles window resize to adjust canvas
+ */
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        if (currentImage) {
+            renderImageToCanvas(currentImage);
+        }
+    }, 250);
+});
+
+// ============================================
+// Keyboard Shortcuts
+// ============================================
+
+/**
+ * Handle keyboard shortcuts
+ */
+document.addEventListener('keydown', (e) => {
+    // Ctrl/Cmd + V to paste image from clipboard
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        navigator.clipboard.read().then(items => {
+            for (const item of items) {
+                for (const type of item.types) {
+                    if (type.startsWith('image/')) {
+                        item.getType(type).then(blob => {
+                            handleFile(blob);
+                        });
+                    }
+                }
+            }
+        }).catch(() => {
+            // Clipboard API not supported or no permission
+        });
+    }
+
+    // Escape to clear
+    if (e.key === 'Escape' && currentImage) {
+        clearButton.click();
+    }
+});
+
+// ============================================
+// Initialize
+// ============================================
+
+console.log('Color Picker initialized successfully!');
+console.log('Features:');
+console.log('- Upload images via drag & drop or file picker');
+console.log('- Click anywhere on the image to extract color');
+console.log('- Copy hex codes to clipboard');
+console.log('- Keyboard shortcuts: Ctrl+V (paste image), Escape (clear)');
+    </script>
+</body>
+</html>
